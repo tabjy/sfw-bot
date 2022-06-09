@@ -13,6 +13,11 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.18.2",
+    "@babel/eslint-parser": "^7.18.2",
+    "@babel/plugin-proposal-decorators": "^7.18.2",
+    "@babel/preset-env": "^7.18.2",
+    "@babel/register": "^7.17.7",
     "husky": "^8.0.1",
     "pino-pretty": "^8.0.0",
     "standard": "^17.0.0"
@@ -25,5 +30,8 @@
     "dotenv": "^16.0.1",
     "level": "^8.0.0",
     "pino": "^8.0.0"
+  },
+  "standard": {
+    "parser": "@babel/eslint-parser"
   }
 }

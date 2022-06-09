@@ -1,4 +1,4 @@
-const Listener = require('../../../listener')
+const Listener = require('../listener')
 
 module.exports = class ClientReadyListener extends Listener {
   constructor () {

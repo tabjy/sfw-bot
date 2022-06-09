@@ -8,7 +8,7 @@ module.exports = async function listeners (client, _) {
 
   client.listeners = {
     emitters: new Map(),
-    async loadListener (code) {
+    async load (code) {
       if (typeof code === 'string') {
         code = loadCode(code)
       }
@@ -37,16 +37,16 @@ module.exports = async function listeners (client, _) {
 
       return listener
     },
-    async loadListeners (directory) {
-      const listeners = Object.keys(await tree(directory, { depth: 0 })).sort()
+    async loadMany (directory) {
+      const listeners = Object.keys(await tree(directory, { depth: 1 })).sort()
       for (const listener of listeners) {
-        await this.loadListener(path.join(directory, listener))
+        await this.load(path.join(directory, listener))
       }
     }
   }
 
   client.listeners.emitters.set('client', client)
-  await client.listeners.loadListeners(path.join(__dirname, 'listeners'))
+  await client.listeners.loadMany(path.join(__dirname, '../../listeners'))
 
   return client.listeners
 }

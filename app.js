@@ -1,3 +1,4 @@
+require('@babel/register')
 require('dotenv').config()
 
 const { Client } = require('./src/core')
@@ -11,6 +12,7 @@ class MyClient extends Client {
       // Options for the bot framework
       clientId: DISCORD_CLIENT_ID,
       token: DISCORD_BOT_TOKEN,
+      ownerIds: (process.env.OWNER_IDS || '').split(','),
       logger: {
         pretty: true,
         level: 'trace'
@@ -39,11 +41,11 @@ class MyClient extends Client {
   //   })
   // })
   //
-  client.on('messageCreate', msg => {
-    console.log(msg)
-  })
+  // client.on('messageCreate', msg => {
+  //   console.log(msg)
+  // })
 
-  client.on('interactionCreate', interaction => {
-    console.log(interaction)
-  })
+  // client.on('interactionCreate', interaction => {
+  //   console.log(interaction)
+  // })
 })()

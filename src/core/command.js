@@ -1,62 +1,74 @@
-const { ApplicationCommandType } = require('discord-api-types/v10')
 const { SnowflakeUtil } = require('discord.js')
-// const {
-//   SlashCommandBuilder,
-//   SlashCommandSubcommandGroupBuilder,
-//   SlashCommandSubcommandBuilder
-// } = require('@discordjs/builders')
 
-const { camelToSnakeCase } = require('./utils')
+const {
+  camelToSnakeCase,
+  createSimpleAnnotation,
+  lookupClassFunctionsWithAnnotation, getAnnotation
+} = require('./utils')
+const { ApplicationCommandOptionType } = require('discord-api-types/v10')
 
-module.exports = class Command {
-  /* eslint-disable camelcase */
-  constructor ({
-    type = ApplicationCommandType.ChatInput, // must be ChatInput
-    guild_id,
-    name = ((name) => {
-      name = camelToSnakeCase(name)
-      if (name.endsWith('-command')) {
-        name = name.substring(0, name.length - ('-command'.length))
-      }
-      return name
-    })(this.constructor.name),
-    name_localizations,
-    description = '',
-    description_localizations,
-    // options = [],
-    default_member_permissions,
-    dm_permission = true,
-    version = SnowflakeUtil.generate()
-  } = {}) {
-    if (type !== ApplicationCommandType.ChatInput) {
-      throw new Error(`command type ${type} not yet supported!`)
-    }
+const annotations = {
+  defaultHandler: createSimpleAnnotation(Symbol('Command.ANNOTATION_KEYS.INIT_HANDLER')),
+  initHandler: createSimpleAnnotation(Symbol('Command.ANNOTATION_KEYS.DEFAULT_HANDLER')),
+  subcommandHandler: createSimpleAnnotation(Symbol('Command.ANNOTATION_KEYS.SUBCOMMAND_HANDLER'))
+}
 
-    if (guild_id) {
-      throw new Error('guid specific commands not yet supported!')
-    }
-
-    // TODO: collect options from annotations
-    this.data = {
-      // type,
+class Command {
+  constructor (
+    {
+      // type = ApplicationCommandType.ChatInput, // must be ChatInput
       // guild_id,
+      name = ((name) => {
+        name = camelToSnakeCase(name)
+        if (name.endsWith('-command')) {
+          name = name.substring(0, name.length - ('-command'.length))
+        }
+        return name
+      })(this.constructor.name),
+      nameLocalizations,
+      description = '(description not available)',
+      descriptionLocalizations,
+      // options = [],
+      defaultMemberPermissions,
+      dmPermission,
+      version = SnowflakeUtil.generate()
+    } = {}
+  ) {
+    this.data = {
       name,
-      // name_localizations,
-      description: 'test'
-      // description_localizations,
-      // default_member_permissions,
-      // dm_permission,
-      // version
+      name_localizations: nameLocalizations,
+      description,
+      description_localizations: descriptionLocalizations,
+      default_member_permissions: defaultMemberPermissions,
+      dm_permission: dmPermission,
+      version
     }
-  }
 
-  async init () {
+    const defaultHandler = lookupClassFunctionsWithAnnotation(this.constructor, annotations.defaultHandler)[0]
+    if (defaultHandler) {
+      const { options } = getAnnotation(defaultHandler, annotations.defaultHandler)
+      this.data.options = options
+    } else {
+      const subcommandHandlers = lookupClassFunctionsWithAnnotation(this.constructor, annotations.subcommandHandler)
+      this.data.options = []
+      for (const subcommandHandler of subcommandHandlers) {
+        this.data.options.push({
+          type: ApplicationCommandOptionType.Subcommand,
+          ...getAnnotation(subcommandHandler, annotations.subcommandHandler)
+        })
+      }
+    }
 
+    this.data = Object.assign(
+      {},
+      ...Object.entries(this.data).filter(([k, v]) => v !== undefined).map(([k, v]) => ({ [k]: v }))
+    )
   }
+}
 
-  default (interaction) {
-    throw new Error('default() must be overridden and implemented!')
-  }
+module.exports = {
+  Command,
+  ...annotations
 }
 
 // const command = new SlashCommandBuilder()

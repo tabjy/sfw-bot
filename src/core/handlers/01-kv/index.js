@@ -113,7 +113,7 @@ module.exports = async function kv (client, {
     case 'level':
       throw new Error('not yet implemented!')
     default:
-      throw new Error(`unrecognized kv driver: ${kv.driver}`)
+      throw new Error(`unrecognized kv driver: ${driver}`)
   }
 
   client.kv = {

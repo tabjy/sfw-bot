@@ -15,6 +15,7 @@ module.exports = class extends Client {
    * @param discordJsOptions
    */
   constructor (botOptions = {}, discordJsOptions = {}) {
+    botOptions.ownerIds = botOptions.ownerIds || []
     discordJsOptions.intents = discordJsOptions.intents || []
 
     super(discordJsOptions)
@@ -22,51 +23,44 @@ module.exports = class extends Client {
     this.botOptions = botOptions
     this.discordJsOptions = discordJsOptions
 
-    this.ownerIds = Array.isArray(botOptions.ownerId) ? botOptions.ownerId : [botOptions.ownerId]
-
-    // this.logger = logger({ prettyPrint, logLevel })
-
+    const self = this
+    const handlers = new Map()
     // load handlers
-    this.handlers = new Map()
+    this.handlers = {
+      async load (code) {
+        if (typeof code === 'string') {
+          code = loadCode(code)
+        }
+
+        if (handlers.has(code)) {
+          // already loaded
+          return handlers.get(code)
+        }
+
+        const handler = await Reflect.apply(code, undefined, [self, self.botOptions])
+        handlers.set(code, handler)
+
+        if (this.logger) {
+          this.logger.trace(`loaded handler ${code.name || '(name unknown)'}`)
+        }
+
+        return handler
+      },
+      async loadMany (directory) {
+        const handlers = Object.keys(await tree(directory, { depth: 1 })).sort()
+        for (const handler of handlers) {
+          await this.load(path.join(directory, handler))
+        }
+      }
+    }
   }
 
   async init () {
-    await this.loadHandlers(path.join(__dirname, 'handlers'))
+    await this.handlers.loadMany(path.join(__dirname, 'handlers'))
 
     const intents = new Intents(this.discordJsOptions.intents)
     intents.add(...REQUIRED_INTENTS) // TODO: add module intents here
     this.discordJsOptions.intents = intents.bitfield
-  }
-
-  /**
-   * load a client handler from an absolute js file path or an in-memory function
-   * @param code - an absolute js file path or an in-memory function
-   */
-  async loadHandler (code) {
-    if (typeof code === 'string') {
-      code = loadCode(code)
-    }
-
-    if (this.handlers.has(code)) {
-      // already loaded
-      return this.handlers.get(code)
-    }
-
-    const handler = await Reflect.apply(code, undefined, [this, this.botOptions])
-    this.handlers.set(code, handler)
-
-    if (this.logger) {
-      this.logger.trace(`loaded handler ${code.name || '(name unknown)'}`)
-    }
-
-    return handler
-  }
-
-  async loadHandlers (directory) {
-    const handlers = Object.keys(await tree(directory, { depth: 0 })).sort()
-    for (const handler of handlers) {
-      await this.loadHandler(path.join(directory, handler))
-    }
   }
 
   isOwner (user) {
