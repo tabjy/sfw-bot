@@ -37,7 +37,7 @@ class EvalCommand extends Command {
       const result = new Script(script).runInNewContext(contextual
         ? { global, this: this, interaction, script, contextual, require, module }
         : {}, { timeout: 100, breakOnSigint: true })
-      interaction.reply(`\`${String(result)}\``)
+      interaction.reply('```\n' + String(result) + '\n```')
     } catch (err) {
       interaction.reply('Failed to execute script!\n' + '```' + err.stack + '```')
     }

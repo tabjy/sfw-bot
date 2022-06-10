@@ -1,5 +1,8 @@
-const { tree } = require('../../utils')
+const fs = require('fs/promises')
 const path = require('path')
+
+const { tree, kebabToCamelCase } = require('../../utils')
+
 module.exports = async function modules (client, _) {
   const modules = new Set()
 
@@ -10,9 +13,18 @@ module.exports = async function modules (client, _) {
         return
       }
 
-      const handlers = Object.keys(await tree(directory, { depth: 1 }))
-      for (const handler of handlers) {
-        client[handler].loadMany(path.join(directory, handler))
+      const entries = Object.keys(await tree(directory, { depth: 1 }))
+      for (const entry of entries) {
+        if (!(await fs.stat(path.join(directory, entry))).isDirectory()) {
+          continue
+        }
+
+        const handler = kebabToCamelCase(entry)
+        if (client[handler] && client[handler].loadMany) {
+          client[handler].loadMany(path.join(directory, entry))
+        } else {
+          client.logger.warn(`handler not installed for ${entry}`)
+        }
       }
 
       modules.add(directory)

@@ -143,7 +143,12 @@ module.exports = async function commands (client, _) {
         ])
       } catch (err) {
         client.logger.error(err)
-        interaction.reply('an unexpected error has occurred!')
+        const msg = 'an unexpected error has occurred! \n ```\n' + err.stack + '\n```'
+        try {
+          await interaction.reply(msg)
+        } catch {
+          await interaction.followUp(msg)
+        }
       }
     }
   })

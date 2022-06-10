@@ -1,7 +1,8 @@
 const fs = require('fs/promises')
 const path = require('path')
+const { spawn } = require('child_process')
 
-async function tree (directory, { depth = -1 }) {
+async function tree (directory, { depth = -1 } = {}) {
   const entries = await Promise.all((await fs.readdir(directory, { withFileTypes: true })).map(entry =>
     (entry.isDirectory() && depth !== 1)
       ? tree(path.join(directory, entry.name), { depth: depth - 1 }).then(res => ({ [entry.name]: res }))
@@ -27,6 +28,14 @@ function loadCode (code) {
 
 function camelToSnakeCase (str) {
   return str.charAt(0).toLowerCase() + str.substring(1).replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)
+}
+
+function kebabToCamelCase (str) {
+  return str.replace(/-./g, x => x[1].toUpperCase())
+}
+
+function snakeToCamelCase (str) {
+  return str.toLowerCase().replace(/_./g, x => x[1].toUpperCase())
 }
 
 function annotate (target, key, options = {}) {
@@ -79,12 +88,48 @@ function lookupClassFunctionsWithAnnotation (klass, key) {
   return [...results, ...lookupClassFunctionsWithAnnotation(Object.getPrototypeOf(klass), key)]
 }
 
+function exec (command, args, options) {
+  const buffers = {
+    stdout: [],
+    stderr: []
+  }
+
+  return new Promise((resolve, reject) => {
+    const cp = spawn(command, args, options = {})
+    cp.stdout.on('data', (data) => buffers.stdout.push(data))
+    cp.stderr.on('data', (data) => buffers.stderr.push(data))
+
+    cp.on('exit', (code) => {
+      if (code === 0) {
+        if (options.returns === 'stderr') {
+          resolve(Buffer.concat(buffers.stderr).toString())
+        } else {
+          resolve(Buffer.concat(buffers.stdout).toString())
+        }
+      } else {
+        reject(new Error(`non-zero exit code (${code}): ` + Buffer.concat(buffers.stderr).toString()))
+      }
+    })
+  })
+}
+
+function shuffle (array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]]
+  }
+}
+
 module.exports = {
   tree,
   loadCode,
   camelToSnakeCase,
+  kebabToCamelCase,
+  snakeToCamelCase,
   annotate,
   getAnnotation,
   lookupClassFunctionsWithAnnotation,
-  createSimpleAnnotation
+  createSimpleAnnotation,
+  exec,
+  shuffle
 }
