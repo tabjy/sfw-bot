@@ -118,7 +118,8 @@ module.exports = async function commands (client, _) {
       }
 
       const klass = Object.getPrototypeOf(instance).constructor
-      let handler; const subcommand = interaction.options.getSubcommand(false)
+      let handler
+      const subcommand = interaction.options.getSubcommand(false)
       if (!subcommand) {
         handler = lookupClassFunctionsWithAnnotation(klass, defaultHandler)[0]
       } else {
@@ -147,7 +148,11 @@ module.exports = async function commands (client, _) {
         try {
           await interaction.reply(msg)
         } catch {
-          await interaction.followUp(msg)
+          try {
+            await interaction.followUp(msg)
+          } catch {
+            // noop
+          }
         }
       }
     }

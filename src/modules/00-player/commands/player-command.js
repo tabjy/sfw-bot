@@ -1,5 +1,5 @@
 const { Command, subcommandHandler } = require('../../../core/command')
-const { ApplicationCommandOptionType } = require('discord-api-types/v10')
+const { ApplicationCommandOptionType, ChannelType } = require('discord-api-types/v10')
 
 const Playlist = require('../playlist')
 const Player = require('../player')
@@ -11,12 +11,13 @@ const {
 } = require('@discordjs/voice')
 const { createExecutorPool } = require('../../../core/utils')
 
+const CONTEXTUAL_LIST_KEY = 'CONTEXTUAL_LIST'
+
 const OPTIONS = {
-  URI: {
-    name: 'uri',
-    description: 'uri to a media resource',
-    type: ApplicationCommandOptionType.String,
-    required: false
+  URI_OR_INDEX: {
+    name: 'uri_or_index',
+    description: 'uri of index to a media resource',
+    type: ApplicationCommandOptionType.String
   },
   LIMIT: {
     name: 'limit',
@@ -30,7 +31,68 @@ const OPTIONS = {
     description: 'number of entries to skip',
     type: ApplicationCommandOptionType.Integer,
     min_value: 0
+  },
+  KEYWORDS: {
+    name: 'keywords',
+    description: 'keywords to search',
+    type: ApplicationCommandOptionType.String,
+    required: true
+  },
+  TYPE: {
+    name: 'type',
+    description: 'type of the keywords',
+    type: ApplicationCommandOptionType.String,
+    choices: [
+      {
+        name: 'Any',
+        value: 'any'
+      },
+      {
+        name: 'Artist',
+        value: 'artist'
+      },
+      {
+        name: 'Album',
+        value: 'album'
+      },
+      {
+        name: 'Title',
+        value: 'title'
+      }
+    ]
+  },
+  CHANNEL: {
+    name: 'channel',
+    description: 'a voice channel to move to',
+    type: ApplicationCommandOptionType.Channel,
+    channel_types: [ChannelType.GuildVoice]
   }
+}
+
+async function renderList (list, { emptyMessage = 'empty list!' } = {}, callback) {
+  if (!list.length) {
+    callback(emptyMessage)
+    return
+  }
+
+  const names = Array(list.length).fill('Loading...')
+  const render = () => '```\n' +
+    names.map((title, i) =>
+      `${String(i).padStart(Math.log(names.length + 1) / Math.log(10) + 1)}. ${title}`).join('\n') +
+    '\n```'
+
+  const updateHandler = setInterval(() => {
+    callback(render())
+  }, 1000)
+
+  const submit = createExecutorPool(4)
+  await Promise.allSettled(list.map((track, i) => submit(() => track.getDisplayName().then(name => {
+    names[i] = name
+  }))))
+
+  clearInterval(updateHandler)
+
+  callback(render())
 }
 
 module.exports = class PlayerCommand extends Command {
@@ -83,12 +145,35 @@ module.exports = class PlayerCommand extends Command {
     subscription = connection.subscribe(player)
     this.subscriptions.set(guild.id, subscription)
 
-    let timeoutHandler; const startTimeout = () => {
+    const destroy = () => {
+      try {
+        subscription.unsubscribe()
+      } catch {}
+
+      try {
+        connection.destroy()
+      } catch {}
+
+      this.subscriptions.delete(guild.id)
+    }
+    connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
+      try {
+        await Promise.race([
+          entersState(connection, VoiceConnectionStatus.Signalling, 5000),
+          entersState(connection, VoiceConnectionStatus.Connecting, 5000)
+        ])
+        // Seems to be reconnecting to a new channel - ignore disconnect
+      } catch (error) {
+        // Seems to be a real disconnect which SHOULDN'T be recovered from
+        destroy()
+      }
+    })
+
+    let timeoutHandler
+    const startTimeout = () => {
       logger.trace('starting disconnect timeout')
       timeoutHandler = setTimeout(() => {
-        subscription.unsubscribe()
-        connection.destroy()
-        this.subscriptions.delete(guild.id)
+        destroy()
       }, 5 * 60 * 1000)
     }
     player.on('stateChange', (oldState, newState) => {
@@ -116,20 +201,20 @@ module.exports = class PlayerCommand extends Command {
     name: 'play',
     description: 'Play the specified resource',
     options: [
-      OPTIONS.URI,
+      OPTIONS.URI_OR_INDEX,
       OPTIONS.LIMIT
     ]
   })
-  async play (interaction, uri, limit = 25) {
+  async play (interaction, uriOrIndex, limit) {
     await interaction.deferReply()
 
     const { player } = await this.getOrCreateSubscription(interaction)
     const queue = player.getQueue()
 
-    if (uri) {
+    if (uriOrIndex) {
       queue.purge()
 
-      await this.add(interaction, uri, limit)
+      await this.add(interaction, uriOrIndex, limit)
 
       queue.next()
     } else {
@@ -142,13 +227,13 @@ module.exports = class PlayerCommand extends Command {
     description: 'add the specified resource to queue',
     options: [
       {
-        ...OPTIONS.URI,
+        ...OPTIONS.URI_OR_INDEX,
         required: true
       },
       OPTIONS.LIMIT
     ]
   })
-  async add (interaction, uri, limit = 25) {
+  async add (interaction, uriOrIndex, limit) {
     try {
       await interaction.deferReply()
     } catch {
@@ -158,17 +243,26 @@ module.exports = class PlayerCommand extends Command {
     const { player } = await this.getOrCreateSubscription(interaction)
     const queue = player.getQueue()
 
+    const index = Number.parseInt(uriOrIndex)
+    if (!isNaN(index)) {
+      const list = await interaction.client.env.get(CONTEXTUAL_LIST_KEY, interaction.channel.id) || []
+      if (!list[index]) {
+        throw new Error('invalid index')
+      }
+      uriOrIndex = list[index]
+    }
+
     try {
-      uri = new URL(uri)
+      uriOrIndex = new URL(uriOrIndex)
     } catch (err) {
-      interaction.client.logger.warn(uri)
+      interaction.client.logger.warn(uriOrIndex)
       await interaction.editReply('invalid URI!')
       return
     }
 
     const result = await Promise.any(
       interaction.client.mediaProviders.providers
-        .map(provider => provider.fromUri(uri, { limit }).then(result => result || (() => { throw new Error('not found') })()))
+        .map(provider => provider.fromUri(uriOrIndex, { limit }).then(result => result || (() => { throw new Error('not found') })()))
     )
 
     if (result instanceof Playlist) {
@@ -224,7 +318,7 @@ module.exports = class PlayerCommand extends Command {
     }
 
     try {
-      interaction.deferReply()
+      await interaction.deferReply()
     } catch {
       // noop
     }
@@ -249,31 +343,9 @@ module.exports = class PlayerCommand extends Command {
 
     const tracks = player.getQueue().list()
 
-    if (tracks.length === 0) {
-      await interaction.reply('The queue is empty!')
-      return
-    }
-
-    const titles = Array(tracks.length).fill('Loading...')
-    const renderList = () => '```\n' +
-      titles.map((title, i) =>
-        `${String(i).padStart(Math.log(titles.length + 1) / Math.log(10) + 1)}. ${title}`).join('\n') +
-      '\n```'
-
-    await interaction.reply(renderList())
-
-    const updateHandler = setInterval(() => {
-      interaction.editReply(renderList()).catch(interaction.client.logger.warn)
-    }, 1000)
-
-    const submit = createExecutorPool(4)
-    await Promise.allSettled(tracks.map((track, i) => submit(() => track.getTitle().then(title => {
-      titles[i] = title
-    }))))
-
-    clearInterval(updateHandler)
-
-    await interaction.editReply(renderList())
+    await interaction.deferReply()
+    await renderList(tracks, { emptyMessage: 'The queue is empty!' }, (content) =>
+      interaction.editReply(content).catch(err => interaction.client.logger.warn(err)))
   }
 
   @subcommandHandler({
@@ -326,6 +398,32 @@ module.exports = class PlayerCommand extends Command {
   }
 
   @subcommandHandler({
+    name: 'summon',
+    description: 'move bot to another channel',
+    options: [
+      OPTIONS.CHANNEL
+    ]
+  })
+  async summon (interaction, channel = interaction.member.voice.channel.id) {
+    const subscription = this.getSubscription(interaction)
+    if (!subscription) {
+      throw new Error('bot not connected to voice!')
+    }
+
+    if (!channel) {
+      throw new Error('invalid target channel')
+    }
+
+    await joinVoiceChannel({
+      channelId: channel,
+      guildId: interaction.guild.id,
+      adapterCreator: interaction.guild.voiceAdapterCreator
+    })
+
+    await interaction.reply('done!')
+  }
+
+  @subcommandHandler({
     name: 'random',
     description: 'queue some randomly picked tracks',
     options: [
@@ -355,5 +453,39 @@ module.exports = class PlayerCommand extends Command {
     }
 
     await interaction.editReply(`queued ${tracks.length} tracks`)
+  }
+
+  @subcommandHandler({
+    name: 'search',
+    description: 'search for resources',
+    options: [
+      OPTIONS.KEYWORDS,
+      OPTIONS.TYPE,
+      OPTIONS.LIMIT
+    ]
+  })
+  async search (interaction, keywords, type, limit) {
+    const { player } = await this.getOrCreateSubscription(interaction)
+    if (!player) {
+      throw new Error('player not found!')
+    }
+
+    await interaction.deferReply()
+    const tracksOrLists = await Promise.any(
+      interaction.client.mediaProviders.providers
+        .map(provider => provider.search(keywords, {
+          limit,
+          type
+        }).then(result => result || (() => { throw new Error('not found') })()))
+    )
+
+    await interaction.client.env.set('CONTEXTUAL_LIST', tracksOrLists.map(obj => obj.getUri()), interaction.channel.id)
+
+    await renderList(tracksOrLists, { emptyMessage: 'No result found!' }, (content) =>
+      interaction.editReply(content).catch(err => interaction.client.logger.warn(err)))
+
+    if (tracksOrLists.length) {
+      await interaction.followUp('add to queue with `/player add <index>` or play with `/player play <index>`')
+    }
   }
 }

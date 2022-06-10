@@ -2,6 +2,7 @@ const fs = require('fs/promises')
 const path = require('path')
 
 const ffmpeg = require('ffmpeg-static')
+const lunr = require('lunr')
 
 const MediaProvider = require('../../00-player/media-provider')
 const Track = require('../../00-player/track')
@@ -59,8 +60,16 @@ class LocalTrack extends Track {
   }
 
   async getMetadata () {
-    if (!this.metadata) {
-      const metadata = await exec(ffmpeg, ['-i', this.path, '-f', 'ffmetadata', '-'])
+    if (this.metadata) {
+      return
+    }
+
+    if (this.monitor) {
+      await this.monitor
+      return
+    }
+
+    this.monitor = exec(ffmpeg, ['-i', this.path, '-f', 'ffmetadata', '-']).then(metadata => {
       this.metadata = Object.assign(
         {},
         ...metadata.split('\n').map(line => {
@@ -69,9 +78,9 @@ class LocalTrack extends Track {
           return { [snakeToCamelCase(key.trim().replace(/\s/g, '_'))]: value }
         })
       )
-    }
+    })
 
-    return this.metadata
+    await this.monitor
   }
 
   getUri () {
@@ -86,6 +95,10 @@ class LocalTrack extends Track {
   async getArtist () {
     await this.getMetadata()
     return this.metadata.artists || this.metadata.artist || undefined
+  }
+
+  async getDisplayName () {
+    return `${await this.getArtist()} - ${await this.getTitle()}`
   }
 
   async getAlbum () {
@@ -113,8 +126,12 @@ class LocalPlaylist extends Playlist {
     this.basePath = basePath
   }
 
-  async getUri () {
+  getUri () {
     return 'local:///' + path.relative(this.basePath, this.path)
+  }
+
+  async getDisplayName () {
+    return `${await this.getName()} (${await this.getSize()})`
   }
 
   async getName () {
@@ -140,21 +157,60 @@ module.exports = class LocalMediaProvider extends MediaProvider {
 
   async init () {
     const store = await this.client.kv.open('local_media_provider')
+
     this.directoryCache = (await store.get('directory_cache')) || []
     this.client.logger.info(`loaded ${this.directoryCache.length} directory cache entries from kv`)
 
-    const handler = () => {
-      this.client.logger.info('updating directory cache')
-      tree(this.basePath, { flatten: true })
-        .then(result => {
-          this.directoryCache = Object.keys(result)
-          this.client.logger.info(`fetched ${this.directoryCache.length} entries for directory cache`)
-          return store.put('directory_cache', this.directoryCache)
-        })
-        .catch(this.client.logger.warn)
+    this.searchCache = null
+    this.updateSearchCache()
+
+    this.updateDirectoryCache().catch(this.client.logger.warn)
+    setInterval(this.updateDirectoryCache.bind(this), 30 * 60 * 1000)
+  }
+
+  async updateDirectoryCache () {
+    const store = await this.client.kv.open('local_media_provider')
+
+    this.client.logger.info('updating directory cache')
+    const result = await tree(this.basePath, { flatten: true })
+    this.directoryCache = Object.keys(result)
+    this.client.logger.info(`fetched ${this.directoryCache.length} entries for directory cache`)
+    return store.put('directory_cache', this.directoryCache)
+  }
+
+  updateSearchCache () {
+    const self = this
+
+    this.searchCache = lunr(function () {
+      this.field('artist', { boost: 3 })
+      this.field('album', { boost: 2 })
+      this.field('title', { boost: 1 })
+
+      self.directoryCache.forEach(entry => {
+        const [artist, album, title] = entry.split(path.sep, 3)
+
+        if (title) {
+          this.add({ title, id: entry })
+        } else if (album) {
+          this.add({ album, id: entry })
+        } else if (artist) {
+          this.add({ artist, id: entry })
+        }
+      })
+    })
+  }
+
+  async createTrackOrPlaylist (path, limit) {
+    const files = await collectFiles(path, { limit })
+    const tracks = files.map(file => new LocalTrack(file, this.basePath))
+
+    if (tracks.length === 0) {
+      return null
+    } else if (tracks.length === 1) {
+      return tracks[0]
+    } else {
+      return new LocalPlaylist(tracks, path, this.basePath)
     }
-    handler()
-    setInterval(handler, 30 * 60 * 1000)
   }
 
   async fromUri (uri, { limit = 25 } = {}) {
@@ -166,33 +222,30 @@ module.exports = class LocalMediaProvider extends MediaProvider {
       throw new Error(`invalid limit (${limit})`)
     }
 
-    const url = path.join(this.basePath, decodeURIComponent(uri.pathname))
-    const files = await collectFiles(url, { limit })
-    const tracks = files.map(file => new LocalTrack(file, this.basePath))
-
-    if (tracks.length === 0) {
-      return null
-    } else if (tracks.length === 1) {
-      return tracks[0]
-    } else {
-      return new LocalPlaylist(tracks, url, this.basePath)
-    }
+    return await this.createTrackOrPlaylist(path.join(this.basePath, decodeURIComponent(uri.pathname)), limit)
   }
 
   async random ({ limit = 25 } = {}) {
-    if (limit > 100 || limit <= 0) {
-      throw new Error(`invalid limit (${limit})`)
-    }
-
     const pool = this.directoryCache
       .filter(entry => defaultExtensions.includes(path.extname(entry)))
       .map(entry => path.join(this.basePath, entry))
     shuffle(pool)
-    const files = pool.slice(0, Math.min(pool.length, limit))
+    const files = pool.slice(0, limit)
     return files.map(file => new LocalTrack(file, this.basePath))
   }
 
-  async search (keyword, { type = 'any', limit = 25 }) {
-    // throw new Error('stub!')
+  async search (keyword, { type = 'any', limit = 10, depth = 25 }) {
+    if (limit > 100 || limit <= 0) {
+      throw new Error(`invalid limit (${limit})`)
+    }
+
+    const query = type === 'any'
+      ? keyword
+      : type + ':' + keyword
+
+    const result = this.searchCache.search(query)
+
+    const files = result.slice(0, limit).map(({ ref }) => path.join(this.basePath, ref))
+    return await Promise.all(files.map(file => this.createTrackOrPlaylist(file, depth)))
   }
 }

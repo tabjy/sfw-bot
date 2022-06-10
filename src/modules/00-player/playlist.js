@@ -1,5 +1,5 @@
 module.exports = class Playlist {
-  async getUri () {
+  getUri () {
   }
 
   async getName () {
