@@ -3,7 +3,13 @@ const { ApplicationCommandOptionType } = require('discord-api-types/v10')
 
 const Playlist = require('../playlist')
 const Player = require('../player')
-const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice')
+const {
+  joinVoiceChannel,
+  entersState,
+  VoiceConnectionStatus,
+  AudioPlayerStatus
+} = require('@discordjs/voice')
+const { createExecutorPool } = require('../../../core/utils')
 
 const OPTIONS = {
   URI: {
@@ -58,8 +64,6 @@ module.exports = class PlayerCommand extends Command {
       throw new Error('not connected to voice!')
     }
 
-    const player = new Player({ logger })
-
     const connection = joinVoiceChannel({
       guildId: guild.id,
       channelId: member.voice.channel.id,
@@ -70,12 +74,41 @@ module.exports = class PlayerCommand extends Command {
     try {
       await entersState(connection, VoiceConnectionStatus.Ready, 5000)
     } catch (error) {
+      connection.destroy()
       throw new Error('failed to join voice channel within 5 seconds!')
     }
 
-    subscription = connection.subscribe(player)
+    const player = new Player({ logger })
 
+    subscription = connection.subscribe(player)
     this.subscriptions.set(guild.id, subscription)
+
+    let timeoutHandler; const startTimeout = () => {
+      logger.trace('starting disconnect timeout')
+      timeoutHandler = setTimeout(() => {
+        subscription.unsubscribe()
+        connection.destroy()
+        this.subscriptions.delete(guild.id)
+      }, 5 * 60 * 1000)
+    }
+    player.on('stateChange', (oldState, newState) => {
+      if (newState.status === AudioPlayerStatus.Idle) {
+        if (timeoutHandler) {
+          return
+        }
+
+        startTimeout()
+        return
+      }
+
+      clearInterval(timeoutHandler)
+      timeoutHandler = undefined
+    })
+
+    if (!player.getQueue().current) {
+      startTimeout()
+    }
+
     return subscription
   }
 
@@ -190,11 +223,17 @@ module.exports = class PlayerCommand extends Command {
       throw new Error('player not found!')
     }
 
+    try {
+      interaction.deferReply()
+    } catch {
+      // noop
+    }
+
     const track = player.getQueue().current
     if (!track) {
-      await interaction.reply('Nothing is playing!')
+      await interaction.editReply('Nothing is playing!')
     } else {
-      await interaction.reply(`Now playing *${await track.getTitle() || '(unknown)'}* by *${await track.getArtist() || '(unknown)'}*`)
+      await interaction.editReply(`Now playing *${await track.getTitle() || '(unknown)'}* by *${await track.getArtist() || '(unknown)'}*`)
     }
   }
 
@@ -227,24 +266,14 @@ module.exports = class PlayerCommand extends Command {
       interaction.editReply(renderList()).catch(interaction.client.logger.warn)
     }, 1000)
 
-    // TODO: use pooled executor
-    for (let i = 0; i < tracks.length; i++) {
-      titles[i] = await tracks[i].getTitle()
-    }
+    const submit = createExecutorPool(4)
+    await Promise.allSettled(tracks.map((track, i) => submit(() => track.getTitle().then(title => {
+      titles[i] = title
+    }))))
 
     clearInterval(updateHandler)
 
     await interaction.editReply(renderList())
-
-    // await Promise.all(tracks.map((track, i) => track.getTitle()
-    //   .catch(err => {
-    //     interaction.client.logger.warn(err)
-    //     return '(track title unavailable)'
-    //   })
-    //   .then(title => {
-    //     titles[i] = title
-    //     return interaction.editReply(renderList())
-    //   })))
   }
 
   @subcommandHandler({
@@ -275,5 +304,56 @@ module.exports = class PlayerCommand extends Command {
     player.getQueue().shuffle()
 
     await this.queue(interaction)
+  }
+
+  @subcommandHandler({
+    name: 'stop',
+    description: 'stop the player'
+  })
+  async stop (interaction) {
+    const subscription = this.getSubscription(interaction)
+    const { connection, player } = subscription || {}
+    if (!player) {
+      throw new Error('player not found!')
+    }
+
+    player.stop()
+    subscription.unsubscribe()
+    connection.destroy()
+    this.subscriptions.delete(interaction.guildId)
+
+    await interaction.reply('Bye!')
+  }
+
+  @subcommandHandler({
+    name: 'random',
+    description: 'queue some randomly picked tracks',
+    options: [
+      OPTIONS.LIMIT
+    ]
+  })
+  async random (interaction, limit) {
+    await interaction.deferReply()
+
+    const { player } = await this.getOrCreateSubscription(interaction)
+    if (!player) {
+      throw new Error('player not found!')
+    }
+
+    const tracks = await Promise.any(
+      interaction.client.mediaProviders.providers
+        .map(provider => provider.random({ limit }).then(result => result || (() => { throw new Error('not found') })()))
+    )
+
+    const queue = player.getQueue()
+    tracks.forEach(track => {
+      queue.add(track)
+    })
+
+    if (!queue.current) {
+      queue.next()
+    }
+
+    await interaction.editReply(`queued ${tracks.length} tracks`)
   }
 }

@@ -6,6 +6,7 @@ module.exports = function open (namespace) {
   }
 
   const store = new Map()
+  store.put = store.set
   stores.set(namespace, store)
   return store
 }

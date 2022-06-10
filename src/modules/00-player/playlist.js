@@ -5,6 +5,10 @@ module.exports = class Playlist {
   async getName () {
   }
 
+  async getDisplayName () {
+    return this.getName()
+  }
+
   async getTracks () {
   }
 

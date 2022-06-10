@@ -15,6 +15,10 @@ module.exports = class Track {
     // throw new Error('stub!')
   }
 
+  async getDisplayName () {
+    return this.getTitle()
+  }
+
   /**
    *
    * @return {Promise<String>}

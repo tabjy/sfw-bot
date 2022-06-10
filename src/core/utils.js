@@ -2,12 +2,75 @@ const fs = require('fs/promises')
 const path = require('path')
 const { spawn } = require('child_process')
 
-async function tree (directory, { depth = -1 } = {}) {
-  const entries = await Promise.all((await fs.readdir(directory, { withFileTypes: true })).map(entry =>
+function createExecutorPool (size = 8) {
+  const queue = []
+  const promises = Array(size).fill(undefined)
+
+  let interrupt; let interruption = new Promise((resolve) => {
+    interrupt = resolve
+  })
+  let locked = false
+
+  async function loop () {
+    if (locked) {
+      return
+    }
+
+    locked = true
+
+    while (queue.length) {
+      for (let i = 0; i < size; i++) {
+        if (promises[i] === undefined && queue.length) {
+          const { func, resolve, reject } = queue.shift()
+          promises[i] = func().then(resolve).catch(reject).then(() => {
+            promises[i] = undefined
+          })
+        }
+      }
+
+      await Promise.race([Promise.race(promises.filter(p => p)).catch(() => {}), interruption])
+      interruption = new Promise((resolve) => {
+        interrupt = resolve
+      })
+    }
+
+    locked = false
+  }
+
+  return function submit (func) {
+    return new Promise((resolve, reject) => {
+      queue.push({
+        func,
+        resolve,
+        reject
+      })
+
+      loop().catch(() => {})
+      interrupt()
+    })
+  }
+}
+
+async function tree (directory, { depth = -1, flatten = false, executorPool = createExecutorPool(8) } = {}) {
+  let entries = await Promise.all((await executorPool(() => fs.readdir(directory, { withFileTypes: true }))).map(entry =>
     (entry.isDirectory() && depth !== 1)
-      ? tree(path.join(directory, entry.name), { depth: depth - 1 }).then(res => ({ [entry.name]: res }))
+      ? tree(path.join(directory, entry.name), {
+        depth: depth - 1,
+        flatten,
+        executorPool
+      }).then(res => ({ [entry.name]: res }))
       : Promise.resolve({ [entry.name]: null })
   ))
+
+  if (flatten) {
+    entries = entries.flatMap(obj => Object.entries(obj).flatMap(([k, v]) => {
+      if (typeof v === 'object' && v) {
+        return [{ [k]: null }, ...Object.entries(v).map(([k2, v]) => ({ [k + path.sep + k2]: v }))]
+      } else {
+        return [{ [k]: v }]
+      }
+    }))
+  }
 
   return Object.assign({}, ...entries)
 }
@@ -121,6 +184,7 @@ function shuffle (array) {
 }
 
 module.exports = {
+  createExecutorPool,
   tree,
   loadCode,
   camelToSnakeCase,

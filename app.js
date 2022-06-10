@@ -16,6 +16,9 @@ class MyClient extends Client {
       clientId: DISCORD_CLIENT_ID,
       token: DISCORD_BOT_TOKEN,
       ownerIds: (process.env.OWNER_IDS || '').split(','),
+      kv: {
+        driver: 'level'
+      },
       player: {
         localMediaBasePath: process.env.LOCAL_MEDIA_BASE_PATH
       },

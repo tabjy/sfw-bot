@@ -74,6 +74,10 @@ module.exports = class Queue extends EventEmitter {
   }
 
   add (track) {
+    if (this.current !== null && this.current.getUri() === track.getUri()) {
+      return
+    }
+
     this.remove(track.getUri())
     this.queue.push(track)
   }

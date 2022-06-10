@@ -37,7 +37,7 @@ class Kv {
       expiration = new Date().valueOf() + expirationTtl
     }
 
-    await this.store.set(key, JSON.stringify({
+    await this.store.put(key, JSON.stringify({
       value,
       expiration,
       metadata
@@ -105,16 +105,7 @@ module.exports = async function kv (client, {
     driver = 'memory'
   } = {}
 } = {}) {
-  let open
-  switch (driver) {
-    case 'memory':
-      open = require('./drivers/memory')
-      break
-    case 'level':
-      throw new Error('not yet implemented!')
-    default:
-      throw new Error(`unrecognized kv driver: ${driver}`)
-  }
+  const open = require('./drivers/' + driver)
 
   client.kv = {
     open: async (namespace) => new Kv(await open(namespace)),

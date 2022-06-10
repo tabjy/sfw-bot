@@ -26,6 +26,7 @@ module.exports = function env (client, { player } = {}) {
       }
 
       const provider = Reflect.construct(code, [player])
+      provider.client = client
       await provider.init()
       providers.set(code, provider)
 
