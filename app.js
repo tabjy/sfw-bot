@@ -1,6 +1,8 @@
 require('@babel/register')
 require('dotenv').config()
 
+const path = require('path')
+
 const { Client } = require('./src/core')
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || (() => { throw new Error('DISCORD_BOT_TOKEN not set!') })()
@@ -24,14 +26,18 @@ class MyClient extends Client {
       // Options for discord.js
     })
   }
+
+  async init () {
+    await super.init()
+
+    await this.modules.loadMany(path.join(__dirname, 'src/modules'))
+  }
 }
 
 ;(async () => {
   const client = new MyClient()
   await client.init()
   await client.login()
-
-  // await client.kv.default.put('test', 123, { expirationTtl: 0 })
 
   // client.on('ready', client => {
   //   console.log('ready')

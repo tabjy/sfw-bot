@@ -28,7 +28,7 @@ class EvalCommand extends Command {
     ]
   })
   async exec (interaction, script, contextual = false) {
-    if (contextual && !interaction.client.botOptions.ownerIds.includes(interaction.user.id)) {
+    if (contextual && !interaction.client.isOwner(interaction.user)) {
       interaction.reply('Only bot admins can execute scripts in local context!')
       return
     }

@@ -57,17 +57,17 @@ module.exports = class extends Client {
 
   async init () {
     await this.handlers.loadMany(path.join(__dirname, 'handlers'))
-
-    const intents = new Intents(this.discordJsOptions.intents)
-    intents.add(...REQUIRED_INTENTS) // TODO: add module intents here
-    this.discordJsOptions.intents = intents.bitfield
   }
 
   isOwner (user) {
-    return this.ownerIds.includes(this.users.resolveId(user))
+    return this.botOptions.ownerIds.includes(this.users.resolveId(user))
   }
 
   async login (token = this.botOptions.token) {
+    const intents = new Intents(this.discordJsOptions.intents)
+    intents.add(...REQUIRED_INTENTS) // TODO: add module intents here
+    this.discordJsOptions.intents = intents.bitfield
+
     return super.login(token)
   }
 }

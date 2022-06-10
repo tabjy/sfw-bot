@@ -106,7 +106,7 @@ module.exports = class EnvCommand extends Command {
     ]
   })
   async set (interaction, name, value, scope = 'user') {
-    if (scope === SCOPES.GLOBAL && !interaction.client.botOptions.ownerIds.includes(interaction.user.id)) {
+    if (scope === SCOPES.GLOBAL && !interaction.client.isOwner(interaction.user)) {
       interaction.reply('Only bot admins can set variables in the global scope!')
       return
     }
@@ -131,7 +131,7 @@ module.exports = class EnvCommand extends Command {
     ]
   })
   async unset (interaction, name, scope = 'user') {
-    if (scope === SCOPES.GLOBAL && !interaction.client.botOptions.ownerIds.includes(interaction.user.id)) {
+    if (scope === SCOPES.GLOBAL && !interaction.client.isOwner(interaction.user)) {
       interaction.reply('Only bot admins can unset variables in the global scope!')
       return
     }
