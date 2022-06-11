@@ -80,7 +80,7 @@ module.exports = async function commands (client, _) {
       const entries = Array.from(commands.values())
       client.logger.trace(`registering ${entries.length} commands`)
       const res = await rest.put(
-        client.botOptions.debug
+        client.botOptions.debug && client.botOptions.debug.guildId
           ? Routes.applicationGuildCommands(client.botOptions.clientId, client.botOptions.debug.guildId)
           : Routes.applicationCommands(client.botOptions.clientId)
         ,
