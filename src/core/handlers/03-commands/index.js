@@ -69,12 +69,14 @@ module.exports = async function commands (client, _) {
           rest.delete(Routes.applicationCommand(client.botOptions.clientId, cmd.id))))
         client.logger.trace(`de-registered ${oldAppCommands.length} old global commands`)
 
-        client.logger.trace('de-registering old guild commands')
-        const oldGuildCommands =
-          await rest.get(Routes.applicationGuildCommands(client.botOptions.clientId, client.botOptions.debug.guildId))
-        await Promise.allSettled(oldGuildCommands.map(cmd =>
-          rest.delete(Routes.applicationGuildCommand(client.botOptions.clientId, client.botOptions.guildId, cmd.id))))
-        client.logger.trace(`de-registered ${oldGuildCommands.length} old guild commands`)
+        if (client.botOptions.debug.guildId) {
+          client.logger.trace('de-registering old guild commands')
+          const oldGuildCommands =
+            await rest.get(Routes.applicationGuildCommands(client.botOptions.clientId, client.botOptions.debug.guildId))
+          await Promise.allSettled(oldGuildCommands.map(cmd =>
+            rest.delete(Routes.applicationGuildCommand(client.botOptions.clientId, client.botOptions.guildId, cmd.id))))
+          client.logger.trace(`de-registered ${oldGuildCommands.length} old guild commands`)
+        }
       }
 
       const entries = Array.from(commands.values())
