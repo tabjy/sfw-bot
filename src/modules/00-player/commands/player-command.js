@@ -48,6 +48,10 @@ const OPTIONS = {
         value: 'any'
       },
       {
+        name: 'Playlist',
+        value: 'playlist'
+      },
+      {
         name: 'Artist',
         value: 'artist'
       },
@@ -56,8 +60,8 @@ const OPTIONS = {
         value: 'album'
       },
       {
-        name: 'Title',
-        value: 'title'
+        name: 'Track',
+        value: 'track'
       }
     ]
   },
@@ -75,10 +79,14 @@ async function renderList (list, { emptyMessage = 'empty list!' } = {}, callback
     return
   }
 
+  const more = list.length - 20
+  list = list.slice(0, 20)
+
   const names = Array(list.length).fill('Loading...')
   const render = () => '```\n' +
     names.map((title, i) =>
       `${String(i).padStart(Math.log(names.length + 1) / Math.log(10) + 1)}. ${title}`).join('\n') +
+    (more > 0 ? `\n\n(${more} more tracks...)` : '') +
     '\n```'
 
   const updateHandler = setInterval(() => {
@@ -471,13 +479,13 @@ module.exports = class PlayerCommand extends Command {
     }
 
     await interaction.deferReply()
-    const tracksOrLists = await Promise.any(
+    const tracksOrLists = (await Promise.all(
       interaction.client.mediaProviders.providers
         .map(provider => provider.search(keywords, {
           limit,
           type
-        }).then(result => result || (() => { throw new Error('not found') })()))
-    )
+        }).then(result => result || []).catch(err => interaction.client.logger.warn(err) || []))
+    )).flatMap(arr => arr)
 
     await interaction.client.env.set('CONTEXTUAL_LIST', tracksOrLists.map(obj => obj.getUri()), interaction.channel.id)
 

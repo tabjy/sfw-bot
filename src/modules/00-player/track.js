@@ -16,7 +16,7 @@ module.exports = class Track {
   }
 
   async getDisplayName () {
-    return this.getTitle()
+    return `${await this.getArtist()} - ${await this.getTitle()}`
   }
 
   /**

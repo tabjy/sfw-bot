@@ -6,21 +6,24 @@ const path = require('path')
 const { Client } = require('./src/core')
 const { Intents } = require('discord.js')
 
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || (() => { throw new Error('DISCORD_BOT_TOKEN not set!') })()
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || (() => { throw new Error('DISCORD_CLIENT_ID not set!') })()
+function getenv (name) {
+  return process.env[name] || (() => { throw new Error(`environment variable ${name} not set!`) })()
+}
 
 class MyClient extends Client {
   constructor () {
     super({
       // Options for the bot framework
-      clientId: DISCORD_CLIENT_ID,
-      token: DISCORD_BOT_TOKEN,
+      clientId: getenv('DISCORD_CLIENT_ID'),
+      token: getenv('DISCORD_BOT_TOKEN'),
       ownerIds: (process.env.OWNER_IDS || '').split(','),
       kv: {
         driver: 'level'
       },
       player: {
-        localMediaBasePath: process.env.LOCAL_MEDIA_BASE_PATH
+        localMediaBasePath: getenv('LOCAL_MEDIA_BASE_PATH'),
+        neteaseEmail: getenv('NETEASE_EMAIL'),
+        neteasePasswordMd5: getenv('NETEASE_PASSWORD_MD5')
       },
       logger: {
         pretty: true,
@@ -62,4 +65,9 @@ class MyClient extends Client {
   // client.on('interactionCreate', interaction => {
   //   console.log(interaction)
   // })
-})()
+})().catch(console.error)
+
+process.on('unhandledRejection', error => {
+  // Will print "unhandledRejection err is not defined"
+  console.error('unhandledRejection', error)
+})

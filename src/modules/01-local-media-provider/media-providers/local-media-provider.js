@@ -97,10 +97,6 @@ class LocalTrack extends Track {
     return this.metadata.artists || this.metadata.artist || undefined
   }
 
-  async getDisplayName () {
-    return `${await this.getArtist()} - ${await this.getTitle()}`
-  }
-
   async getAlbum () {
     await this.getMetadata()
     return this.metadata.album || undefined
@@ -128,10 +124,6 @@ class LocalPlaylist extends Playlist {
 
   getUri () {
     return 'local:///' + path.relative(this.basePath, this.path)
-  }
-
-  async getDisplayName () {
-    return `${await this.getName()} (${await this.getSize()})`
   }
 
   async getName () {
@@ -164,7 +156,7 @@ module.exports = class LocalMediaProvider extends MediaProvider {
     this.searchCache = null
     this.updateSearchCache()
 
-    this.updateDirectoryCache().catch(this.client.logger.warn)
+    this.updateDirectoryCache().catch(err => this.client.logger.warn(err))
     setInterval(this.updateDirectoryCache.bind(this), 30 * 60 * 1000)
   }
 
@@ -184,13 +176,13 @@ module.exports = class LocalMediaProvider extends MediaProvider {
     this.searchCache = lunr(function () {
       this.field('artist', { boost: 3 })
       this.field('album', { boost: 2 })
-      this.field('title', { boost: 1 })
+      this.field('track', { boost: 1 })
 
       self.directoryCache.forEach(entry => {
-        const [artist, album, title] = entry.split(path.sep, 3)
+        const [artist, album, track] = entry.split(path.sep, 3)
 
-        if (title) {
-          this.add({ title, id: entry })
+        if (track) {
+          this.add({ track, id: entry })
         } else if (album) {
           this.add({ album, id: entry })
         } else if (artist) {
@@ -201,6 +193,10 @@ module.exports = class LocalMediaProvider extends MediaProvider {
   }
 
   async createTrackOrPlaylist (path, limit) {
+    if (limit > 100 || limit <= 0) {
+      throw new Error(`invalid limit (${limit})`)
+    }
+
     const files = await collectFiles(path, { limit })
     const tracks = files.map(file => new LocalTrack(file, this.basePath))
 
@@ -214,6 +210,10 @@ module.exports = class LocalMediaProvider extends MediaProvider {
   }
 
   async fromUri (uri, { limit = 25 } = {}) {
+    if (limit > 100 || limit <= 0) {
+      throw new Error(`invalid limit (${limit})`)
+    }
+
     if (uri.protocol !== 'local:') {
       return null
     }
@@ -226,6 +226,10 @@ module.exports = class LocalMediaProvider extends MediaProvider {
   }
 
   async random ({ limit = 25 } = {}) {
+    if (limit > 100 || limit <= 0) {
+      throw new Error(`invalid limit (${limit})`)
+    }
+
     const pool = this.directoryCache
       .filter(entry => defaultExtensions.includes(path.extname(entry)))
       .map(entry => path.join(this.basePath, entry))
