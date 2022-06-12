@@ -84,6 +84,7 @@ class NeteaseTrack extends Track {
       throw new Error('media unavailable')
     }
 
+    // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
     const p = new Promise((resolve, reject) => {
       get(this.url.url, (res) => {
         const { statusCode } = res

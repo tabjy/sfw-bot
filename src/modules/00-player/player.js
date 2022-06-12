@@ -30,6 +30,12 @@ module.exports = class Player extends AudioPlayer {
     this.on('stateChange', (oldState, newState) => {
       this.logger.trace(`player state changed from ${oldState.status} to ${newState.status}`)
     })
+
+    this.on('error', (err) => {
+      this.logger.error(err)
+      this.stop(true)
+      this.queue.next()
+    })
   }
 
   getQueue () {
