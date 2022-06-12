@@ -2,13 +2,19 @@ FROM ubuntu
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update  \
-    && apt install -y curl sudo  \
-    && curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -  \
-    && apt install -y nodejs git build-essential libtool
+COPY . /app
 
-RUN git clone https://github.com/tabjy/sfw-bot.git /app && cd /app && npm install
+RUN apt update &&  \
+    apt install -y curl sudo &&  \
+    curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash - &&  \
+    apt install -y nodejs build-essential libtool &&  \
+    cd /app &&  \
+    npm install &&  \
+    apt remove -y build-essential libtool && \
+    apt clean &&  \
+    apt autoremove -y &&  \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/
 
 WORKDIR /app
 
-CMD [ "npm", "run", "start" ]
+ENTRYPOINT [ "npm", "run", "start" ]
