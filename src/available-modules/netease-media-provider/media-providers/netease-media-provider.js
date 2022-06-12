@@ -1,10 +1,10 @@
 const NeteaseCloudMusicApi = require('NeteaseCloudMusicApi')
 
-const MediaProvider = require('../../00-player/media-provider')
-const Track = require('../../00-player/track')
+const MediaProvider = require('../../player/media-provider')
+const Track = require('../../player/track')
 const { createAudioResource } = require('@discordjs/voice')
 const { get } = require('http')
-const Playlist = require('../../00-player/playlist')
+const Playlist = require('../../player/playlist')
 
 class NeteaseTrack extends Track {
   constructor (id, cookie) {

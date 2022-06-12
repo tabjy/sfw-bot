@@ -10,6 +10,7 @@
 - [x] music player with extensible media provider
 - [x] local media provider
 - [x] [Netease music media](http://music.163.com/) provider
+- [x] [Jellyfin](https://jellyfin.org/) media provider
 - [ ] Youtube media provider
 - [ ] ~bake you a cake~ 
 

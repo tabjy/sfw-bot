@@ -23,7 +23,10 @@ class MyClient extends Client {
       player: {
         localMediaBasePath: getenv('LOCAL_MEDIA_BASE_PATH'),
         neteaseEmail: getenv('NETEASE_EMAIL'),
-        neteasePasswordMd5: getenv('NETEASE_PASSWORD_MD5')
+        neteasePasswordMd5: getenv('NETEASE_PASSWORD_MD5'),
+        jellyfinBasePath: getenv('JELLYFIN_BASE_PATH'),
+        jellyfinApiKey: getenv('JELLYFIN_API_KEY'),
+        jellyfinUserId: getenv('JELLYFIN_USER_ID')
       },
       logger: {
         pretty: true,
