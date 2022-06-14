@@ -15,8 +15,7 @@ const MediaProvider = require('../../player/media-provider')
 const Track = require('../../player/track')
 
 const Playlist = require('../../player/playlist')
-const { get } = require('http')
-const { get: gets } = require('https')
+const { openHttpStream } = require('../../../core/utils')
 
 function getJellyfinItemUri () {
   return `${this.conf.basePath}/web/index.html#!/details?id=${this.id}`
@@ -89,22 +88,15 @@ class JellyfinTrack extends Track {
         // api_key: this.conf.apiKey,
       }).toString()
 
-    // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
-    const p = new Promise((resolve, reject) => {
-      (url.startsWith('https://') ? gets : get)(url, (res) => {
-        const { statusCode } = res
-        if (statusCode >= 400) {
-          reject(new Error(`non-2xx status code: ${statusCode}`))
-          return
-        }
-
-        resolve(res)
-      })
-    })
-
     options.metadata = options.metadata || {}
     options.metadata.track = this
-    return createAudioResource(await p, options)
+
+    if (process.env.PROXY_HTTP_STREAM_FOR_FFMPEG) {
+      return createAudioResource(url, options)
+    } else {
+      // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
+      return createAudioResource(await openHttpStream(url), options)
+    }
   }
 }
 

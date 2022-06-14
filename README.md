@@ -16,23 +16,21 @@
 
 ## Usage
 
-```
-$ git clone https://github.com/tabjy/sfw-bot.git
-$ cd sfw-bot
-$ cp .env.example .env
-$ vim .env # update your configs
-```
-
 ### Docker 
 
 ```
-$ docker build -t sfw-bot .
-$ docker run -v <path-to-dot-env>:/app/.env -v <optionally-path-to-data-dir>:/app/.level -d sfw-bot
+$ curl https://raw.githubusercontent.com/tabjy/sfw-bot/master/.env-example -o .env
+$ vim .env # update your configs
+$ docker run -v $PWD/.env:/app/.env -v [<path-to-data-dir>:/app/.level] -d ghcr.io/tabjy/sfw-bot:latest
 ```
 
 ### without Docker
 
 ```
+$ git clone https://github.com/tabjy/sfw-bot.git
+$ cd sfw-bot
+$ cp .env.example .env
+$ vim .env # update your configs
 $ npm install
 $ npm run start
 ```

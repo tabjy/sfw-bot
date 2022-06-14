@@ -1,6 +1,8 @@
 const fs = require('fs/promises')
 const path = require('path')
 const { spawn } = require('child_process')
+const { get } = require('http')
+const { get: gets } = require('https')
 
 function createExecutorPool (size = 8) {
   const queue = []
@@ -183,6 +185,20 @@ function shuffle (array) {
   }
 }
 
+function openHttpStream (url) {
+  return new Promise((resolve, reject) => {
+    (url.startsWith('https://') ? gets : get)(url, (res) => {
+      const { statusCode } = res
+      if (statusCode >= 400) {
+        reject(new Error(`non-2xx status code: ${statusCode}`))
+        return
+      }
+
+      resolve(res)
+    })
+  })
+}
+
 module.exports = {
   createExecutorPool,
   tree,
@@ -195,5 +211,6 @@ module.exports = {
   lookupClassFunctionsWithAnnotation,
   createSimpleAnnotation,
   exec,
-  shuffle
+  shuffle,
+  openHttpStream
 }

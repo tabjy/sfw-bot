@@ -3,8 +3,8 @@ const NeteaseCloudMusicApi = require('NeteaseCloudMusicApi')
 const MediaProvider = require('../../player/media-provider')
 const Track = require('../../player/track')
 const { createAudioResource } = require('@discordjs/voice')
-const { get } = require('http')
 const Playlist = require('../../player/playlist')
+const { openHttpStream } = require('../../../core/utils')
 
 class NeteaseTrack extends Track {
   constructor (id, cookie) {
@@ -84,22 +84,15 @@ class NeteaseTrack extends Track {
       throw new Error('media unavailable')
     }
 
-    // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
-    const p = new Promise((resolve, reject) => {
-      get(this.url.url, (res) => {
-        const { statusCode } = res
-        if (statusCode >= 400) {
-          reject(new Error(`non-2xx status code: ${statusCode}`))
-          return
-        }
-
-        resolve(res)
-      })
-    })
-
     options.metadata = options.metadata || {}
     options.metadata.track = this
-    return createAudioResource(await p, options)
+
+    if (process.env.PROXY_HTTP_STREAM_FOR_FFMPEG) {
+      return createAudioResource(this.url.url, options)
+    } else {
+      // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
+      return createAudioResource(await openHttpStream(this.url.url), options)
+    }
   }
 }
 
