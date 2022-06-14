@@ -30,7 +30,7 @@ module.exports = function env (client, { player } = {}) {
       await provider.init()
       providers.set(code, provider)
 
-      client.logger.trace(`loaded listener ${code.name || '(name unknown)'}`)
+      client.logger.trace(`loaded media provider ${code.name || '(name unknown)'}`)
 
       return provider
     },

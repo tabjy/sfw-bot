@@ -40,7 +40,8 @@
     "npm": "^8.12.1",
     "pino": "^8.0.0",
     "sodium": "^3.0.2",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "youtube-dl-exec": "^2.0.12"
   },
   "overrides": {
     "@discordjs/voice": {

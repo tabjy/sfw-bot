@@ -11,10 +11,10 @@ const {
   BaseItemKind
 } = require('../vendor/jellyfin-client-axios/stable/dist')
 
-const MediaProvider = require('../../player/media-provider')
-const Track = require('../../player/track')
+const MediaProvider = require('../../../available-modules/player/media-provider')
+const Track = require('../../../available-modules/player/track')
 
-const Playlist = require('../../player/playlist')
+const Playlist = require('../../../available-modules/player/playlist')
 const { openHttpStream } = require('../../../core/utils')
 
 function getJellyfinItemUri () {
@@ -31,7 +31,7 @@ async function getJellyfinItemMetadata () {
     return
   }
 
-  this.monitor = await (new ItemsApi(this.conf).getItems({
+  this.monitor = (new ItemsApi(this.conf).getItems({
     ids: [this.id],
     userId: this.userId
   })).then(({ data: { Items: [metadata] } }) => {

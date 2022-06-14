@@ -6,7 +6,7 @@ module.exports = class Playlist {
   }
 
   async getDisplayName () {
-    return `${await this.getName()} (${await this.getSize()})`
+    return `${(await this.getName()) || '(unknown playlist)'} (${(await this.getName()) || '(?)'})`
   }
 
   async getTracks () {

@@ -16,7 +16,7 @@ module.exports = class Track {
   }
 
   async getDisplayName () {
-    return `${await this.getArtist()} - ${await this.getTitle()}`
+    return `${(await this.getArtist()) || '(unknown)'} - ${(await this.getTitle()) || '(unknown)'}`
   }
 
   /**
