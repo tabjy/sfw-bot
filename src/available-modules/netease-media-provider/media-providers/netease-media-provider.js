@@ -4,7 +4,7 @@ const MediaProvider = require('../../../available-modules/player/media-provider'
 const Track = require('../../../available-modules/player/track')
 const { createAudioResource } = require('@discordjs/voice')
 const Playlist = require('../../../available-modules/player/playlist')
-const { openHttpStream } = require('../../../core/utils')
+const { openHttpStream } = require('../../../core/utils/io')
 
 class NeteaseTrack extends Track {
   constructor (id, cookie) {

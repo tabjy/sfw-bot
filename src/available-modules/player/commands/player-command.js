@@ -1,15 +1,16 @@
-const { Command, subcommandHandler } = require('../../../core/command')
-const { ApplicationCommandOptionType, ChannelType } = require('discord-api-types/v10')
-
-const Playlist = require('../playlist')
-const Player = require('../player')
 const {
   joinVoiceChannel,
   entersState,
   VoiceConnectionStatus,
   AudioPlayerStatus
 } = require('@discordjs/voice')
-const { createExecutorPool } = require('../../../core/utils')
+const { ApplicationCommandOptionType, ChannelType } = require('discord-api-types/v10')
+
+const { createExecutorPool } = require('../../../core/utils/concurrency')
+
+const { Command, subcommandHandler } = require('../../../core/command')
+const Playlist = require('../playlist')
+const Player = require('../player')
 
 const CONTEXTUAL_LIST_KEY = 'CONTEXTUAL_LIST'
 
@@ -106,7 +107,7 @@ async function renderList (list, { emptyMessage = 'empty list!' } = {}, callback
 module.exports = class PlayerCommand extends Command {
   constructor () {
     super({
-      description: 'Control the music player.js'
+      description: 'Control the music player'
     })
 
     // guild -> subscription

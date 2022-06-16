@@ -1,7 +1,8 @@
 const fs = require('fs/promises')
 const path = require('path')
 
-const { tree, kebabToCamelCase } = require('../../utils')
+const { tree } = require('../../utils/io')
+const { kebabToCamelCase } = require('../../utils/strings')
 
 module.exports = async function modules (client, _) {
   const modules = new Set()

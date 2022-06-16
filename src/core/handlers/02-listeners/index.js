@@ -1,6 +1,7 @@
 const path = require('path')
 
-const { loadCode, tree } = require('../../utils')
+const { loadCode } = require('../../utils/io')
+const { tree } = require('../../utils/io')
 const Listener = require('../../listener')
 
 module.exports = async function listeners (client, _) {

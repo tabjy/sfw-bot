@@ -2,7 +2,8 @@ const path = require('path')
 
 const { Client, Intents } = require('discord.js')
 
-const { tree, loadCode } = require('./utils')
+const { loadCode } = require('./utils/io')
+const { tree } = require('./utils/io')
 
 // TODO: set only necessary intents
 const REQUIRED_INTENTS = [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.DIRECT_MESSAGES]

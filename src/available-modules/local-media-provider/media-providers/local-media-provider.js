@@ -3,12 +3,15 @@ const path = require('path')
 
 const ffmpeg = require('ffmpeg-static')
 const lunr = require('lunr')
+const { createAudioResource } = require('@discordjs/voice')
 
 const MediaProvider = require('../../player/media-provider')
 const Track = require('../../player/track')
-const { exec, snakeToCamelCase, tree, shuffle } = require('../../../core/utils')
+const { exec } = require('../../../core/utils/os')
+const { tree } = require('../../../core/utils/io')
+const { shuffle } = require('../../../core/utils/arrays')
+const { snakeToCamelCase } = require('../../../core/utils/strings')
 const Playlist = require('../../player/playlist')
-const { createAudioResource } = require('@discordjs/voice')
 
 const defaultExtensions = ['.aac', '.ape', '.flac', '.m4a', '.mp3', '.ogg', '.opus', '.wav', '.cda']
 

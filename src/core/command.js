@@ -1,10 +1,13 @@
 const { SnowflakeUtil } = require('discord.js')
 
+const { camelToSnakeCase } = require('./utils/strings')
+
 const {
-  camelToSnakeCase,
+  getAnnotation,
   createSimpleAnnotation,
-  lookupClassFunctionsWithAnnotation, getAnnotation
-} = require('./utils')
+  lookupClassFunctionsWithAnnotation
+} = require('./utils/annotations')
+
 const { ApplicationCommandOptionType } = require('discord-api-types/v10')
 
 const annotations = {

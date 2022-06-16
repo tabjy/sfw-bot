@@ -1,9 +1,10 @@
+const path = require('path')
+
 const { REST } = require('@discordjs/rest')
 const { Routes } = require('discord-api-types/v10')
 
-const path = require('path')
-
-const { loadCode, tree, lookupClassFunctionsWithAnnotation, getAnnotation } = require('../../utils')
+const { loadCode, tree } = require('../../utils/io')
+const { lookupClassFunctionsWithAnnotation, getAnnotation } = require('../../utils/annotations')
 const { Command, initHandler, defaultHandler, subcommandHandler } = require('../../command')
 const Listener = require('../../listener')
 

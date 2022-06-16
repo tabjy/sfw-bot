@@ -1,6 +1,8 @@
 const path = require('path')
 
-const { loadCode, tree } = require('../../../core/utils')
+const { loadCode } = require('../../../core/utils/io')
+const { tree } = require('../../../core/utils/io')
+
 const MediaProvider = require('../media-provider')
 
 module.exports = function env (client, { player } = {}) {

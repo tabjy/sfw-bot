@@ -1,7 +1,7 @@
 const { EventEmitter } = require('events')
 
 const Playlist = require('./playlist')
-const { shuffle } = require('../../core/utils')
+const { shuffle } = require('../../core/utils/arrays')
 
 module.exports = class Queue extends EventEmitter {
   constructor () {

@@ -7,5 +7,9 @@ module.exports = class ClientReadyListener extends Listener {
 
   async exec (client, event) {
     client.logger.info(`logged in as ${client.user.username}(${client.user})`)
+
+    client.user.setActivity('futa plays', {
+      type: 'WATCHING'
+    })
   }
 }

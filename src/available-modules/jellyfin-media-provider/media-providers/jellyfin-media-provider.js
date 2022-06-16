@@ -15,7 +15,7 @@ const MediaProvider = require('../../../available-modules/player/media-provider'
 const Track = require('../../../available-modules/player/track')
 
 const Playlist = require('../../../available-modules/player/playlist')
-const { openHttpStream } = require('../../../core/utils')
+const { openHttpStream } = require('../../../core/utils/io')
 
 function getJellyfinItemUri () {
   return `${this.conf.basePath}/web/index.html#!/details?id=${this.id}`
