@@ -92,10 +92,10 @@ class JellyfinTrack extends Track {
     options.metadata.track = this
 
     if (process.env.PROXY_HTTP_STREAM_FOR_FFMPEG) {
-      return createAudioResource(url, options)
-    } else {
       // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
       return createAudioResource(await openHttpStream(url), options)
+    } else {
+      return createAudioResource(url, options)
     }
   }
 }
@@ -130,15 +130,28 @@ class JellyfinPlaylist extends Playlist {
       return
     }
 
+    await this.getMetadata()
+
     if (this.monitor2) {
       await this.monitor2
       return
     }
 
+    let sortBy = []
+    switch (this.metadata.Type) {
+      case BaseItemKind.MusicAlbum:
+        sortBy = ['SortName']
+        break
+      case BaseItemKind.MusicArtist:
+        sortBy = ['CommunityRating', 'CriticRating', 'PlayCount']
+        break
+    }
+
     this.monitor2 = await (new ItemsApi(this.conf).getItems({
       parentId: this.id,
       recursive: true,
-      includeItemTypes: ['Audio'],
+      includeItemTypes: [BaseItemKind.Audio],
+      sortBy,
       fields: Object.values(ItemFields),
       userId: this.userId
     })).then(({ data: { Items } }) => {

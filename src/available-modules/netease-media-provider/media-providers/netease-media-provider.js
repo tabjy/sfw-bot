@@ -88,10 +88,10 @@ class NeteaseTrack extends Track {
     options.metadata.track = this
 
     if (process.env.PROXY_HTTP_STREAM_FOR_FFMPEG) {
-      return createAudioResource(this.url.url, options)
-    } else {
       // HACK: ffmpeg static builds sometimes segfault for some reason when input is an HTTP stream
       return createAudioResource(await openHttpStream(this.url.url), options)
+    } else {
+      return createAudioResource(this.url.url, options)
     }
   }
 }

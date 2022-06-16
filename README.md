@@ -2,7 +2,7 @@
 
 ## Features
 
-- [x] extensible framework
+- [x] extensible modular framework
 - [x] customizable event listeners 
 - [x] command injection with annotation
 - [x] persistent KV store with [level](https://github.com/Level/level)
@@ -11,7 +11,7 @@
 - [x] local media provider
 - [x] [Netease music media](http://music.163.com/) provider
 - [x] [Jellyfin](https://jellyfin.org/) media provider
-- [ ] Youtube media provider
+- [x] [youtube-dl](https://youtube-dl.org/) (Youtube, Bilibili, ~Pornhub~, etc.) media provider
 - [ ] ~bake you a cake~ 
 
 ## Usage
