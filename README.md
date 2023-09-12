@@ -21,7 +21,7 @@
 ```
 $ curl https://raw.githubusercontent.com/tabjy/sfw-bot/master/.env-example -o .env
 $ vim .env # update your configs
-$ docker run -v $PWD/.env:/app/.env -v [<path-to-data-dir>:/app/.level] -d ghcr.io/tabjy/sfw-bot:latest
+$ docker run -v $PWD/.env:/app/.env -v [<path-to-data-dir>:/app/.level] -d ghcr.io/tabjy/sfw-bot:master
 ```
 
 ### without Docker

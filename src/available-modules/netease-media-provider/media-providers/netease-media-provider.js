@@ -67,9 +67,7 @@ class NeteaseTrack extends Track {
     if (this.monitor2) {
       await this.monitor2
       return
-    }
-
-    this.monitor2 = NeteaseCloudMusicApi.song_url({ id: this.id, cookie: this.cookie, realIP: '43.131.160.1' })
+    } this.monitor2 = NeteaseCloudMusicApi.song_url({ id: this.id.toString(), cookie: this.cookie, realIP: '43.131.160.1' })
       .then(({ body: { data: [url] } }) => {
         this.url = url
       })
