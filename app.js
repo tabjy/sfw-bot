@@ -6,6 +6,8 @@ const path = require('path')
 const { Client } = require('./src/core')
 const { Intents } = require('discord.js')
 
+const pkg = require('./package.json')
+
 function getenv (name) {
   return process.env[name] || (() => { throw new Error(`environment variable ${name} not set!`) })()
 }
@@ -39,6 +41,10 @@ class MyClient extends Client {
       // Options for discord.js
       intents: [Intents.FLAGS.GUILD_VOICE_STATES] // TODO: refactor intents to modules
     })
+
+    this.meta = {
+      package: pkg
+    }
   }
 
   async init () {
