@@ -80,10 +80,10 @@ class YtdlTrack extends Track {
     }
 
     if (['www.youtube.com', 'youtube.com', 'youtube.com'].includes(new URL(this.url).hostname)) {
-      flags.format = 'bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio'
+      flags.format = 'ytsearch:bestaudio[ext=webm][acodec=opus][asr=48000]/bestaudio'
     }
 
-    // FIXME: need to figure out stdout if stdout is a media buffer or error message (by probing the first few bytes?)
+    // FIXME: need to figure out if stdout is a media buffer or error message (by probing the first few bytes?)
     const cp = ytdl.exec(this.url, flags)
 
     try {
@@ -164,6 +164,7 @@ module.exports = class YtdlProvider extends MediaProvider {
       metadata = await getMetadata(uri)
     } catch (error) {
       this.client.logger.warn(`unsupported ytdl source: ${uri}`)
+      this.client.logger.trace(error)
       return null
     }
 
