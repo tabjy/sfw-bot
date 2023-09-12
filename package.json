@@ -13,7 +13,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@babel/core": "^7.18.2",
+    "@babel/core": "^7.22.17",
     "@babel/eslint-parser": "^7.18.2",
     "@babel/plugin-proposal-decorators": "^7.18.2",
     "@babel/preset-env": "^7.18.2",
@@ -23,10 +23,10 @@
     "standard": "^17.0.0"
   },
   "dependencies": {
-    "@discordjs/builders": "^0.14.0",
-    "@discordjs/opus": "^0.5.3",
-    "@discordjs/rest": "^0.5.0",
-    "@discordjs/voice": "^0.10.0",
+    "@discordjs/builders": "^1.6.5",
+    "@discordjs/opus": "^0.9.0",
+    "@discordjs/rest": "^2.0.1",
+    "@discordjs/voice": "^0.16.0",
     "axios": "^0.27.2",
     "classic-level": "^1.2.0",
     "discord-api-types": "^0.33.3",
@@ -36,12 +36,12 @@
     "install": "^0.13.0",
     "level": "^8.0.0",
     "lunr": "^2.3.9",
-    "NeteaseCloudMusicApi": "^4.6.2",
-    "npm": "^8.12.1",
+    "NeteaseCloudMusicApi": "^4.12.2",
+    "npm": "^10.0.0",
     "pino": "^8.0.0",
     "sodium": "^3.0.2",
     "uuid": "^8.3.2",
-    "youtube-dl-exec": "^2.0.12"
+    "youtube-dl-exec": "^2.4.7"
   },
   "overrides": {
     "@discordjs/voice": {

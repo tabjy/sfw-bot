@@ -3,7 +3,7 @@ const { AudioPlayer, AudioPlayerStatus, NoSubscriberBehavior } = require('@disco
 const Queue = require('./queue')
 
 module.exports = class Player extends AudioPlayer {
-  constructor ({ logger }, discordJsOptions = {}) {
+  constructor ({ logger, connection }, discordJsOptions = {}) {
     super({
       ...discordJsOptions,
       behaviors: {
@@ -12,6 +12,7 @@ module.exports = class Player extends AudioPlayer {
     })
 
     this.logger = logger
+    this.connection = connection
 
     this.queue = new Queue()
 
@@ -29,6 +30,15 @@ module.exports = class Player extends AudioPlayer {
 
     this.on('stateChange', (oldState, newState) => {
       this.logger.trace(`player state changed from ${oldState.status} to ${newState.status}`)
+
+      // workaround until https://github.com/discordjs/discord.js/issues/8993 is fixed
+      // there is a small pause but there is nothing we could do about it
+      if (oldState.status === AudioPlayerStatus.Playing &&
+        newState.status === AudioPlayerStatus.AutoPaused
+      ) {
+        this.logger.trace('workaround: re-configuring networking for connection')
+        connection.configureNetworking()
+      }
     })
 
     this.on('error', (err) => {

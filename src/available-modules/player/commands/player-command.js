@@ -6,7 +6,7 @@ const {
 } = require('@discordjs/voice')
 const { ApplicationCommandOptionType, ChannelType } = require('discord-api-types/v10')
 
-const { createExecutorPool } = require('../../../core/utils/concurrency')
+const { createConcurrentPool } = require('../../../core/utils/concurrency')
 
 const { Command, subcommandHandler } = require('../../../core/command')
 const Playlist = require('../playlist')
@@ -94,7 +94,7 @@ async function renderList (list, { emptyMessage = 'empty list!' } = {}, callback
     callback(render())
   }, 1000)
 
-  const submit = createExecutorPool(4)
+  const submit = createConcurrentPool(4)
   await Promise.allSettled(list.map((track, i) => submit(() => track.getDisplayName().then(name => {
     names[i] = name
   }))))
@@ -149,7 +149,7 @@ module.exports = class PlayerCommand extends Command {
       throw new Error('failed to join voice channel within 5 seconds!')
     }
 
-    const player = new Player({ logger })
+    const player = new Player({ logger, connection })
 
     subscription = connection.subscribe(player)
     this.subscriptions.set(guild.id, subscription)

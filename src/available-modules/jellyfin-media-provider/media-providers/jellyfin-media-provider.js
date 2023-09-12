@@ -81,7 +81,7 @@ class JellyfinTrack extends Track {
   }
 
   async createAudioResource (options = {}) {
-    const url = 'https://jellyfin.tabjy.com/Audio/' + this.id + '/stream?' +
+    const url = this.conf.basePath + '/Audio/' + this.id + '/stream?' +
       new URLSearchParams({
         Static: true,
         mediaSourceId: this.id

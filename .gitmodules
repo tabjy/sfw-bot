@@ -1,0 +1,3 @@
+[submodule "src/available-modules/jellyfin-media-provider/vendor/jellyfin-client-axios"]
+	path = src/available-modules/jellyfin-media-provider/vendor/jellyfin-client-axios
+	url = https://github.com/jellyfin-archive/jellyfin-client-axios.git
